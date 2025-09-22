@@ -50,19 +50,18 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let option = AirBridgeOptionBuilder(name: appName, token: appToken)
+        let option = AirbridgeOptionBuilder(name: appName, token: appToken)
 
         // Optional configuration
         if let timeout = call.getInt("autoDetermineTrackingAuthorizationTimeoutInSecond") {
-            option.setAutoStartTrackingAuthorizationTimeoutSeconds(timeout)
+            option.setAutoDetermineTrackingAuthorizationTimeout(second: timeout)
         }
 
         if let handleAirbridgeOnly = call.getBool("isHandleAirbridgeDeeplinkOnly") {
-            // Configure deeplink handling
-            // Note: This might need adjustment based on actual iOS SDK API
+            option.setTrackAirbridgeDeeplinkOnlyEnabled(handleAirbridgeOnly)
         }
 
-        AirBridge.getInstance().initializeSDK(option.build())
+        Airbridge.initializeSDK(option: option.build())
         call.resolve()
     }
 
@@ -72,23 +71,27 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let event = AirBridgeEvent(category: category)
+        // Get semantic attributes
+        let semanticAttributes = call.getObject("semanticAttributes")
 
-        // Add semantic attributes
-        if let semanticAttributes = call.getObject("semanticAttributes") {
-            for (key, value) in semanticAttributes {
-                event.setSemanticAttribute(key, value: value)
-            }
+        // Get custom attributes
+        let customAttributes = call.getObject("customAttributes")
+
+        // Call appropriate trackEvent method based on available parameters
+        if let customAttributes = customAttributes {
+            Airbridge.trackEvent(
+                category: category,
+                semanticAttributes: semanticAttributes ?? [:],
+                customAttributes: customAttributes
+            )
+        } else if let semanticAttributes = semanticAttributes {
+            Airbridge.trackEvent(
+                category: category,
+                semanticAttributes: semanticAttributes
+            )
+        } else {
+            Airbridge.trackEvent(category: category)
         }
-
-        // Add custom attributes
-        if let customAttributes = call.getObject("customAttributes") {
-            for (key, value) in customAttributes {
-                event.setCustomAttribute(key, value: value)
-            }
-        }
-
-        AirBridge.getInstance().trackEvent(event)
         call.resolve()
     }
 
@@ -100,12 +103,12 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
         self.deeplinkCallbackId = callbackId
 
-        AirBridge.getInstance().setOnDeeplinkReceiveListener { [weak self] deeplink in
+        Airbridge.setOnDeeplinkReceiveListener { [weak self] url in
             guard let self = self,
                   let callbackId = self.deeplinkCallbackId else { return }
 
             self.notifyListeners(callbackId, data: [
-                "url": deeplink.rawValue
+                "url": url?.absoluteString ?? ""
             ])
         }
 
@@ -114,32 +117,29 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func clearDeeplinkListener(_ call: CAPPluginCall) {
         self.deeplinkCallbackId = nil
-        AirBridge.getInstance().setOnDeeplinkReceiveListener(nil)
+        Airbridge.setOnDeeplinkReceiveListener(nil)
         call.resolve()
     }
 
     @objc func setUser(_ call: CAPPluginCall) {
-        let user = AirBridgeUser()
-
         if let userId = call.getString("id") {
-            user.setID(userId)
+            Airbridge.setUserID(userId)
         }
 
         if let email = call.getString("email") {
-            user.setEmail(email)
+            Airbridge.setUserEmail(email)
         }
 
         if let phone = call.getString("phone") {
-            user.setPhoneNumber(phone)
+            Airbridge.setUserPhone(phone)
         }
 
         if let attributes = call.getObject("attributes") {
             for (key, value) in attributes {
-                user.setAttribute(key, value: value)
+                Airbridge.setUserAttribute(key, value: value)
             }
         }
 
-        AirBridge.getInstance().setUser(user)
         call.resolve()
     }
 
@@ -150,14 +150,14 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        AirBridge.getInstance().setDeviceAlias(key, value: value)
+        Airbridge.setDeviceAlias(key, value: value)
         call.resolve()
     }
 
     // MARK: - Extended User Management Methods
 
     @objc func clearUser(_ call: CAPPluginCall) {
-        AirBridge.getInstance().clearUser()
+        Airbridge.clearUser()
         call.resolve()
     }
 
@@ -167,7 +167,7 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        AirBridge.getInstance().setUserID(id)
+        Airbridge.setUserID(id)
         call.resolve()
     }
 
@@ -177,7 +177,7 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        AirBridge.getInstance().setUserEmail(email)
+        Airbridge.setUserEmail(email)
         call.resolve()
     }
 
@@ -187,7 +187,7 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        AirBridge.getInstance().setUserPhone(phone)
+        Airbridge.setUserPhone(phone)
         call.resolve()
     }
 
@@ -198,7 +198,7 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        AirBridge.getInstance().setUserAlias(key, value: value)
+        Airbridge.setUserAlias(key, value: value)
         call.resolve()
     }
 
@@ -209,7 +209,7 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         let value = call.getValue("value")
-        AirBridge.getInstance().setUserAttribute(key, value: value)
+        Airbridge.setUserAttribute(key, value: value)
         call.resolve()
     }
 
@@ -221,12 +221,12 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        AirBridge.getInstance().removeDeviceAlias(key)
+        Airbridge.removeDeviceAlias(key)
         call.resolve()
     }
 
     @objc func clearDeviceAlias(_ call: CAPPluginCall) {
-        AirBridge.getInstance().clearDeviceAlias()
+        Airbridge.clearDeviceAlias()
         call.resolve()
     }
 
@@ -239,7 +239,14 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        AirBridge.getInstance().handleDeeplink(url)
+        let _ = Airbridge.handleDeeplink(url: url) { [weak self] resultUrl in
+            // Notify deeplink callback if registered
+            self?.deeplinkCallbackId.flatMap { callbackId in
+                self?.notifyListeners(callbackId, data: [
+                    "url": resultUrl?.absoluteString ?? url.absoluteString
+                ])
+            }
+        }
         call.resolve()
     }
 
@@ -251,15 +258,24 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
         let timeoutMillis = call.getInt("timeoutMillis")
 
-        AirBridge.getInstance().handleDeferredDeeplink { [weak self] deeplink in
+        let _ = Airbridge.handleDeferredDeeplink { [weak self] url in
             guard let self = self else { return }
 
             let result: [String: Any] = [
-                "url": deeplink?.rawValue ?? "",
-                "success": deeplink != nil
+                "url": url?.absoluteString ?? "",
+                "success": url != nil
             ]
 
             self.notifyListeners(callbackId, data: result)
+
+            // Also update registered deeplink callback if exists
+            if let url = url {
+                self.deeplinkCallbackId.flatMap { id in
+                    self.notifyListeners(id, data: [
+                        "url": url.absoluteString
+                    ])
+                }
+            }
         }
 
         call.resolve()
@@ -273,19 +289,19 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         // Track deeplink with optional parameters
+        var customAttributes: [String: Any] = ["deeplink_url": urlString]
+
         if let parameters = call.getObject("parameters") {
-            // Create event with deeplink tracking
-            let event = AirBridgeEvent(category: "deeplink_tracked")
             for (key, value) in parameters {
-                event.setCustomAttribute(key, value: value)
+                customAttributes[key] = value
             }
-            event.setCustomAttribute("deeplink_url", value: urlString)
-            AirBridge.getInstance().trackEvent(event)
-        } else {
-            let event = AirBridgeEvent(category: "deeplink_tracked")
-            event.setCustomAttribute("deeplink_url", value: urlString)
-            AirBridge.getInstance().trackEvent(event)
         }
+
+        Airbridge.trackEvent(
+            category: "deeplink_tracked",
+            semanticAttributes: nil,
+            customAttributes: customAttributes
+        )
 
         call.resolve()
     }
@@ -293,17 +309,17 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - SDK Control Methods
 
     @objc func stopTracking(_ call: CAPPluginCall) {
-        AirBridge.getInstance().stopTracking()
+        Airbridge.stopTracking()
         call.resolve()
     }
 
     @objc func enableSDK(_ call: CAPPluginCall) {
-        AirBridge.getInstance().enableSDK()
+        Airbridge.enableSDK()
         call.resolve()
     }
 
     @objc func disableSDK(_ call: CAPPluginCall) {
-        AirBridge.getInstance().disableSDK()
+        Airbridge.disableSDK()
         call.resolve()
     }
 
@@ -320,36 +336,37 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
         let fallback = call.getString("fallback")
         let parameters = call.getObject("parameters")
 
-        // Create tracking link options
-        let option = AirBridgeTrackingLinkOption()
+        // Create tracking link options map
+        var option: [String: Any] = [:]
         if let campaign = campaign {
-            option.setCampaign(campaign)
+            option["campaign"] = campaign
         }
         if let deeplink = deeplink {
-            option.setDeeplink(deeplink)
+            option["deeplink"] = deeplink
         }
         if let fallback = fallback {
-            option.setFallback(fallback)
+            option["fallback"] = fallback
         }
         if let parameters = parameters {
             for (key, value) in parameters {
-                option.setCustomAttribute(key, value: value)
+                option[key] = value
             }
         }
 
-        AirBridge.getInstance().createTrackingLink(channel, option: option) { url, error in
-            if let error = error {
-                call.reject("Failed to create tracking link: \(error.localizedDescription)")
-            } else if let url = url {
-                call.resolve(["url": url.absoluteString])
-            } else {
-                call.reject("Unknown error creating tracking link")
+        Airbridge.createTrackingLink(
+            channel: channel,
+            option: option,
+            onSuccess: { trackingLink in
+                call.resolve(["url": trackingLink.shortURL.absoluteString])
+            },
+            onFailure: { error in
+                call.reject("Failed to create tracking link: \(error?.localizedDescription ?? "Unknown error")")
             }
-        }
+        )
     }
 
     @objc func fetchAirbridgeGeneratedUUID(_ call: CAPPluginCall) {
-        let uuid = AirBridge.getInstance().fetchAirbridgeGeneratedUUID()
+        let uuid = Airbridge.fetchAirbridgeGeneratedUUID()
         call.resolve(["uuid": uuid])
     }
 }

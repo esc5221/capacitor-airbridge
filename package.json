@@ -1,6 +1,6 @@
 {
   "name": "capacitor-airbridge",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "Capacitor plugin for Airbridge SDK integration",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
@@ -20,11 +20,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-org/capacitor-airbridge.git"
+    "url": "git+https://github.com/esc5221/capacitor-airbridge.git"
   },
   "bugs": {
-    "url": "https://github.com/your-org/capacitor-airbridge/issues"
+    "url": "https://github.com/esc5221/capacitor-airbridge/issues"
   },
+  "homepage": "https://github.com/esc5221/capacitor-airbridge#readme",
   "keywords": [
     "capacitor",
     "plugin",
@@ -44,7 +45,8 @@
     "prettier": "prettier \"**/*.{css,html,ts,js,java}\"",
     "swiftlint": "node-swiftlint",
     "docgen": "docgen --api AirbridgePlugin --output-readme README.md --output-json dist/docs.json",
-    "build": "npm run clean && npm run docgen && tsc && rollup -c rollup.config.js",
+    "build": "npm run clean && tsc && rollup -c rollup.config.js",
+    "build:withdocs": "npm run clean && npm run docgen && tsc && rollup -c rollup.config.js",
     "clean": "rimraf ./dist",
     "watch": "tsc --watch",
     "test": "jest",

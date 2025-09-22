@@ -90,22 +90,12 @@ class AirbridgePlugin : Plugin() {
         }
 
         this.deeplinkCallbackId = callbackId
-
-        Airbridge.setOnDeeplinkReceiveListener { uri ->
-            deeplinkCallbackId?.let { id ->
-                val result = JSObject()
-                result.put("url", uri?.toString() ?: "")
-                notifyListeners(id, result)
-            }
-        }
-
         call.resolve()
     }
 
     @PluginMethod
     fun clearDeeplinkListener(call: PluginCall) {
         this.deeplinkCallbackId = null
-        Airbridge.setOnDeeplinkReceiveListener(null)
         call.resolve()
     }
 
@@ -126,7 +116,7 @@ class AirbridgePlugin : Plugin() {
             while (keys.hasNext()) {
                 val key = keys.next()
                 val value = attrs.get(key)
-                Airbridge.setUserAttribute(key, value)
+                setUserAttributeWithTypeConversion(key, value)
             }
         }
 
@@ -213,8 +203,8 @@ class AirbridgePlugin : Plugin() {
             return
         }
 
-        val value = call.getData().opt(key)
-        Airbridge.setUserAttribute(key, value)
+        val value = call.getData().opt("value")
+        setUserAttributeWithTypeConversion(key, value)
         call.resolve()
     }
 
@@ -252,7 +242,12 @@ class AirbridgePlugin : Plugin() {
             val uri = android.net.Uri.parse(urlString)
             val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
             val success = Airbridge.handleDeeplink(intent) { resultUri ->
-                // Handle successful deeplink processing
+                // Notify deeplink callback if registered
+                deeplinkCallbackId?.let { id ->
+                    val result = JSObject()
+                    result.put("url", resultUri?.toString() ?: urlString)
+                    notifyListeners(id, result)
+                }
             }
             if (success) {
                 call.resolve()
@@ -279,6 +274,15 @@ class AirbridgePlugin : Plugin() {
             result.put("url", uri?.toString() ?: "")
             result.put("success", uri != null)
             notifyListeners(callbackId, result)
+
+            // Also update registered deeplink callback if exists
+            if (uri != null) {
+                deeplinkCallbackId?.let { id ->
+                    val deeplinkResult = JSObject()
+                    deeplinkResult.put("url", uri.toString())
+                    notifyListeners(id, deeplinkResult)
+                }
+            }
         }
 
         if (!success) {
@@ -384,5 +388,18 @@ class AirbridgePlugin : Plugin() {
         val result = JSObject()
         result.put("uuid", uuid)
         call.resolve(result)
+    }
+
+    private fun setUserAttributeWithTypeConversion(key: String, value: Any?) {
+        when (value) {
+            is String -> Airbridge.setUserAttribute(key, value)
+            is Int -> Airbridge.setUserAttribute(key, value)
+            is Long -> Airbridge.setUserAttribute(key, value)
+            is Float -> Airbridge.setUserAttribute(key, value)
+            is Double -> Airbridge.setUserAttribute(key, value)
+            is Boolean -> Airbridge.setUserAttribute(key, value)
+            null -> return // Skip null values
+            else -> Airbridge.setUserAttribute(key, value.toString()) // Convert others to String
+        }
     }
 }

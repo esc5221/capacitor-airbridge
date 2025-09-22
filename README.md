@@ -3,8 +3,8 @@
 🌉 **Complete Capacitor plugin for Airbridge SDK integration** - Full API coverage with 100% TypeScript support.
 
 [![npm version](https://badge.fury.io/js/capacitor-airbridge.svg)](https://badge.fury.io/js/capacitor-airbridge)
-[![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/your-org/capacitor-airbridge)
-[![Tests: 63 passed](https://img.shields.io/badge/tests-63%20passed-brightgreen.svg)](https://github.com/your-org/capacitor-airbridge)
+[![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/esc5221/capacitor-airbridge)
+[![Tests: 63 passed](https://img.shields.io/badge/tests-63%20passed-brightgreen.svg)](https://github.com/esc5221/capacitor-airbridge)
 
 ## ✨ Features
 
@@ -408,7 +408,7 @@ npm run fmt
 
 ## 🔧 Example Usage
 
-Check out the [example repository](https://github.com/your-org/capacitor-airbridge-example) for a complete implementation demo.
+Check out the [example directory](https://github.com/esc5221/capacitor-airbridge/tree/main/example) for a complete implementation demo.
 
 ## 📊 Compatibility
 
@@ -456,9 +456,9 @@ MIT © [GPAI Team](mailto:dev@gpai.co)
 
 ## 🙋‍♂️ Support
 
-- 📚 [Documentation](https://github.com/your-org/capacitor-airbridge/wiki)
-- 🐛 [Issue Tracker](https://github.com/your-org/capacitor-airbridge/issues)
-- 💬 [Discussions](https://github.com/your-org/capacitor-airbridge/discussions)
+- 📚 [Documentation](https://github.com/esc5221/capacitor-airbridge/wiki)
+- 🐛 [Issue Tracker](https://github.com/esc5221/capacitor-airbridge/issues)
+- 💬 [Discussions](https://github.com/esc5221/capacitor-airbridge/discussions)
 
 ---
 
