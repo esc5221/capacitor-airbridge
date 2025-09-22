@@ -1,0 +1,114 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+.build/
+*.tgz
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# iOS
+ios/Pods/
+ios/build/
+ios/.build/
+ios/DerivedData/
+*.xcworkspace/
+*.xcuserdata/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+
+# Android
+android/.gradle/
+android/build/
+android/local.properties
+android/captures/
+*.iml
+.gradle/
+.idea/
+*.apk
+*.aab
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+*.xcodeproj/
+*.xcworkspace/
+
+# Example app specific
+example/node_modules/
+example/dist/
+example/build/
+example/ios/App/Pods/
+example/ios/App/build/
+example/android/.gradle/
+example/android/app/build/
+example/.next/
+example/.expo/
+example/.turbo/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# Package files
+*.tar
+*.tar.gz
+*.zip
+*.rar
+
+# Documentation build
+docs/_build/
+docs/.vuepress/dist/
+
+# Misc
+.cache/
+.parcel-cache/
+.turbo/
