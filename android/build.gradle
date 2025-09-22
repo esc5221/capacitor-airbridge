@@ -66,7 +66,7 @@ dependencies {
     implementation project(':capacitor-android')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.10'
-    implementation 'co.ab180.airbridge:airbridge-android-sdk:4.+'
+    implementation 'io.airbridge:sdk-android:+'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

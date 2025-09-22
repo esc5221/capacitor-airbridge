@@ -1,10 +1,10 @@
 package io.airbridge.capacitor
 
 import co.ab180.airbridge.Airbridge
-import co.ab180.airbridge.AirbridgeConfig
-import co.ab180.airbridge.AirbridgeDeeplink
-import co.ab180.airbridge.event.AirbridgeEvent
-import co.ab180.airbridge.event.model.AirbridgeUser
+import co.ab180.airbridge.AirbridgeOption
+import co.ab180.airbridge.AirbridgeOptionBuilder
+import co.ab180.airbridge.common.AirbridgeCategory
+import co.ab180.airbridge.common.AirbridgeAttribute
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -27,7 +27,7 @@ class AirbridgePlugin : Plugin() {
             return
         }
 
-        val config = AirbridgeConfig.Builder(appName, appToken)
+        val option = AirbridgeOptionBuilder(appName, appToken)
 
         // Optional configuration
         val timeout = call.getInt("autoDetermineTrackingAuthorizationTimeoutInSecond")
@@ -37,9 +37,11 @@ class AirbridgePlugin : Plugin() {
         }
 
         val handleAirbridgeOnly = call.getBoolean("isHandleAirbridgeDeeplinkOnly", false)
-        config.setOnlyAirbridgeAttribution(handleAirbridgeOnly!!)
+        if (handleAirbridgeOnly == true) {
+            option.setTrackAirbridgeDeeplinkOnlyEnabled(true)
+        }
 
-        Airbridge.initializeSDK(activity.application, config.build())
+        Airbridge.initializeSDK(activity.application, option.build())
         call.resolve()
     }
 
@@ -51,31 +53,31 @@ class AirbridgePlugin : Plugin() {
             return
         }
 
-        val event = AirbridgeEvent.Builder(category)
-
-        // Add semantic attributes
+        // Get semantic attributes
         val semanticAttributes = call.getObject("semanticAttributes")
+        val semanticAttrsMap = mutableMapOf<String, Any?>()
         semanticAttributes?.let { attrs ->
             val keys = attrs.keys()
             while (keys.hasNext()) {
                 val key = keys.next()
                 val value = attrs.get(key)
-                event.setSemanticAttribute(key, value)
+                semanticAttrsMap[key] = value
             }
         }
 
-        // Add custom attributes
+        // Get custom attributes
         val customAttributes = call.getObject("customAttributes")
+        val customAttrsMap = mutableMapOf<String, Any?>()
         customAttributes?.let { attrs ->
             val keys = attrs.keys()
             while (keys.hasNext()) {
                 val key = keys.next()
                 val value = attrs.get(key)
-                event.setCustomAttribute(key, value)
+                customAttrsMap[key] = value
             }
         }
 
-        Airbridge.trackEvent(event.build())
+        Airbridge.trackEvent(category, semanticAttrsMap, customAttrsMap)
         call.resolve()
     }
 
@@ -89,10 +91,10 @@ class AirbridgePlugin : Plugin() {
 
         this.deeplinkCallbackId = callbackId
 
-        Airbridge.setOnDeeplinkReceiveListener { deeplink ->
+        Airbridge.setOnDeeplinkReceiveListener { uri ->
             deeplinkCallbackId?.let { id ->
                 val result = JSObject()
-                result.put("url", deeplink.rawValue)
+                result.put("url", uri?.toString() ?: "")
                 notifyListeners(id, result)
             }
         }
@@ -109,16 +111,14 @@ class AirbridgePlugin : Plugin() {
 
     @PluginMethod
     fun setUser(call: PluginCall) {
-        val user = AirbridgeUser.Builder()
-
         val userId = call.getString("id")
-        userId?.let { user.setID(it) }
+        userId?.let { Airbridge.setUserID(it) }
 
         val email = call.getString("email")
-        email?.let { user.setEmail(it) }
+        email?.let { Airbridge.setUserEmail(it) }
 
         val phone = call.getString("phone")
-        phone?.let { user.setPhoneNumber(it) }
+        phone?.let { Airbridge.setUserPhone(it) }
 
         val attributes = call.getObject("attributes")
         attributes?.let { attrs ->
@@ -126,11 +126,10 @@ class AirbridgePlugin : Plugin() {
             while (keys.hasNext()) {
                 val key = keys.next()
                 val value = attrs.get(key)
-                user.setAttribute(key, value)
+                Airbridge.setUserAttribute(key, value)
             }
         }
 
-        Airbridge.setUser(user.build())
         call.resolve()
     }
 
@@ -252,8 +251,14 @@ class AirbridgePlugin : Plugin() {
         try {
             val uri = android.net.Uri.parse(urlString)
             val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
-            Airbridge.handleDeeplink(intent)
-            call.resolve()
+            val success = Airbridge.handleDeeplink(intent) { resultUri ->
+                // Handle successful deeplink processing
+            }
+            if (success) {
+                call.resolve()
+            } else {
+                call.reject("Failed to handle deeplink")
+            }
         } catch (e: Exception) {
             call.reject("Invalid URL: ${e.message}")
         }
@@ -269,11 +274,16 @@ class AirbridgePlugin : Plugin() {
 
         val timeoutMillis = call.getInt("timeoutMillis")
 
-        Airbridge.handleDeferredDeeplink { deeplink ->
+        val success = Airbridge.handleDeferredDeeplink { uri ->
             val result = JSObject()
-            result.put("url", deeplink?.rawValue ?: "")
-            result.put("success", deeplink != null)
+            result.put("url", uri?.toString() ?: "")
+            result.put("success", uri != null)
             notifyListeners(callbackId, result)
+        }
+
+        if (!success) {
+            call.reject("Failed to handle deferred deeplink")
+            return
         }
 
         call.resolve()
@@ -290,19 +300,19 @@ class AirbridgePlugin : Plugin() {
         val parameters = call.getObject("parameters")
 
         // Track deeplink as custom event
-        val event = AirbridgeEvent.Builder("deeplink_tracked")
-        event.setCustomAttribute("deeplink_url", urlString)
+        val customAttrsMap = mutableMapOf<String, Any?>()
+        customAttrsMap["deeplink_url"] = urlString
 
         parameters?.let { params ->
             val keys = params.keys()
             while (keys.hasNext()) {
                 val key = keys.next()
                 val value = params.get(key)
-                event.setCustomAttribute(key, value)
+                customAttrsMap[key] = value
             }
         }
 
-        Airbridge.trackEvent(event.build())
+        Airbridge.trackEvent("deeplink_tracked", null, customAttrsMap)
         call.resolve()
     }
 
@@ -341,32 +351,31 @@ class AirbridgePlugin : Plugin() {
         val fallback = call.getString("fallback")
         val parameters = call.getObject("parameters")
 
-        // Create tracking link option
-        val option = AirbridgeTrackingLinkOption()
-        campaign?.let { option.setCampaign(it) }
-        deeplink?.let { option.setDeeplink(it) }
-        fallback?.let { option.setFallback(it) }
+        // Create tracking link option map
+        val option = mutableMapOf<String, Any>()
+        campaign?.let { option["campaign"] = it }
+        deeplink?.let { option["deeplink"] = it }
+        fallback?.let { option["fallback"] = it }
 
         parameters?.let { params ->
             val keys = params.keys()
             while (keys.hasNext()) {
                 val key = keys.next()
                 val value = params.get(key)
-                option.setCustomAttribute(key, value)
+                option[key] = value
             }
         }
 
-        Airbridge.createTrackingLink(channel, option) { url, error ->
-            if (error != null) {
-                call.reject("Failed to create tracking link: ${error.message}")
-            } else if (url != null) {
+        Airbridge.createTrackingLink(channel, option,
+            { trackingLink ->
                 val result = JSObject()
-                result.put("url", url.toString())
+                result.put("url", trackingLink.shortURL.toString())
                 call.resolve(result)
-            } else {
-                call.reject("Unknown error creating tracking link")
+            },
+            { error ->
+                call.reject("Failed to create tracking link: ${error?.message}")
             }
-        }
+        )
     }
 
     @PluginMethod
