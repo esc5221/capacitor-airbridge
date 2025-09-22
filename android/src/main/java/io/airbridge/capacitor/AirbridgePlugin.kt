@@ -384,10 +384,15 @@ class AirbridgePlugin : Plugin() {
 
     @PluginMethod
     fun fetchAirbridgeGeneratedUUID(call: PluginCall) {
-        val uuid = Airbridge.fetchAirbridgeGeneratedUUID()
-        val result = JSObject()
-        result.put("uuid", uuid)
-        call.resolve(result)
+        val success = Airbridge.fetchAirbridgeGeneratedUUID { uuid ->
+            val result = JSObject()
+            result.put("uuid", uuid)
+            call.resolve(result)
+        }
+
+        if (!success) {
+            call.reject("Failed to fetch UUID")
+        }
     }
 
     private fun setUserAttributeWithTypeConversion(key: String, value: Any?) {
