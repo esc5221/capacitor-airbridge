@@ -46,6 +46,25 @@ npx cap spm-migration-assistant
 
 ## 📋 API Reference
 
+### Initialization Options
+
+Common
+- `appName: string` (required)
+- `appToken: string` (required)
+- `isHandleAirbridgeDeeplinkOnly?: boolean`
+- `autoStartTrackingEnabled?: boolean` (default true)
+- `trackingLinkCustomDomains?: string[]`
+- `sdkEnabled?: boolean` (default true) — initialize SDK enabled/disabled (both iOS/Android)
+
+Android-specific
+- `trackInSessionLifecycleEventEnabled?: boolean`
+- `sessionTimeoutSecond?: number` (default 300)
+- `eventTransmitIntervalMs?: number` (default 0)
+- `logLevel?: 'DEBUG'|'INFO'|'WARN'|'ERROR'|'FAULT'`
+
+iOS-specific
+- `autoDetermineTrackingAuthorizationTimeoutInSecond?: number`
+
 ### Core Methods
 
 | Method | Description |
@@ -87,6 +106,7 @@ npx cap spm-migration-assistant
 
 | Method | Description |
 |--------|-------------|
+| `startTracking()` | Start tracking after opt-in |
 | `stopTracking()` | Stop all tracking activities |
 | `enableSDK()` | Enable SDK functionality |
 | `disableSDK()` | Disable SDK functionality |
@@ -113,7 +133,7 @@ await Airbridge.initialize({
 });
 ```
 
-### Event Tracking
+### Event Tracking (Standard + Custom)
 
 ```typescript
 // Simple event
@@ -121,7 +141,16 @@ await Airbridge.trackEvent({
   category: AirbridgeCategory.SIGNIN
 });
 
-// E-commerce event with full attributes
+// Standard event with action/label/value (report-visible)
+await Airbridge.trackEvent({
+  category: AirbridgeCategory.SIGNUP,
+  action: 'oauth',       // shows as Event Action
+  label: 'google',       // shows as Event Label
+  value: 0,              // shows as Value (float)
+  customAttributes: { referrer: 'google' }
+});
+
+// E-commerce event with semantic + custom attributes
 await Airbridge.trackEvent({
   category: AirbridgeCategory.ORDER_COMPLETE,
   semanticAttributes: {
@@ -141,6 +170,14 @@ await Airbridge.trackEvent({
     'campaign': 'black-friday',
     'platform': 'mobile'
   }
+});
+
+// Custom event (snake_case, cannot start with `airbridge.`)
+await Airbridge.trackEvent({
+  category: 'solver_problem_submitted',
+  action: 'algebra',
+  label: 'task_123',
+  customAttributes: { task_id: 'task_123', solver_type: 'algebra' }
 });
 ```
 
@@ -248,6 +285,15 @@ await Airbridge.disableSDK();
 // Get unique SDK identifier
 const { uuid } = await Airbridge.fetchAirbridgeGeneratedUUID();
 console.log('SDK UUID:', uuid);
+
+// Opt-In flow example (Android/iOS)
+await Airbridge.initialize({
+  appName: 'your-app',
+  appToken: 'token',
+  autoStartTrackingEnabled: false
+});
+// After CMP consent
+await Airbridge.startTracking();
 ```
 
 ### Device Management

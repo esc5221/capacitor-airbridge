@@ -2,6 +2,7 @@
 const mockPlugin = {
   initialize: jest.fn().mockResolvedValue(undefined),
   trackEvent: jest.fn().mockResolvedValue(undefined),
+  startTracking: jest.fn().mockResolvedValue(undefined),
   setUser: jest.fn().mockResolvedValue(undefined),
   setOnDeeplinkReceived: jest.fn().mockResolvedValue(undefined),
   clearDeeplinkListener: jest.fn().mockResolvedValue(undefined),
@@ -59,9 +60,15 @@ describe('Airbridge Integration Tests', () => {
         }
       });
 
-      // 3. Track multiple events
+      // 3. Start tracking after opt-in
+      await Airbridge.startTracking();
+
+      // 4. Track multiple events
       await Airbridge.trackEvent({
         category: AirbridgeCategory.SIGNUP,
+        action: 'oauth',
+        label: 'google',
+        value: 0,
         customAttributes: {
           referrer: 'google',
           campaign: 'integration-test'
@@ -80,6 +87,7 @@ describe('Airbridge Integration Tests', () => {
       // Verify all calls were made
       expect(mockPlugin.initialize).toHaveBeenCalledTimes(1);
       expect(mockPlugin.setUser).toHaveBeenCalledTimes(1);
+      expect(mockPlugin.startTracking).toHaveBeenCalledTimes(1);
       expect(mockPlugin.trackEvent).toHaveBeenCalledTimes(2);
     });
 

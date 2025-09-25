@@ -9,6 +9,7 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "initialize", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "trackEvent", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startTracking", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setOnDeeplinkReceived", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearDeeplinkListener", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setUser", returnType: CAPPluginReturnPromise),
@@ -61,7 +62,44 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
             option.setTrackAirbridgeDeeplinkOnlyEnabled(handleAirbridgeOnly)
         }
 
+        // iOS: autoStartTrackingEnabled 지원
+        if let autoStart = call.getBool("autoStartTrackingEnabled") {
+            option.setAutoStartTrackingEnabled(autoStart)
+        }
+
+        // iOS: trackingLinkCustomDomains 지원
+        if let domains = call.getArray("trackingLinkCustomDomains") as? [String], !domains.isEmpty {
+            option.setTrackingLinkCustomDomains(domains)
+        }
+
+        // iOS: SDK Enabled (initialize in disabled state)
+        if let enabled = call.getBool("sdkEnabled") {
+            option.setSDKEnabled(enabled)
+        }
+
+        // iOS: In-session lifecycle events
+        if let trackInSession = call.getBool("trackInSessionLifecycleEventEnabled") {
+            option.setTrackInSessionLifecycleEventEnabled(trackInSession)
+        }
+
+        // iOS: Log level mapping
+        if let logLevel = call.getString("logLevel")?.uppercased() {
+            switch logLevel {
+            case "DEBUG": option.setLogLevel(.debug)
+            case "INFO": option.setLogLevel(.info)
+            case "WARN", "WARNING": option.setLogLevel(.warning)
+            case "ERROR": option.setLogLevel(.error)
+            case "FAULT", "ASSERT": option.setLogLevel(.fault)
+            default: break
+            }
+        }
+
         Airbridge.initializeSDK(option: option.build())
+        call.resolve()
+    }
+
+    @objc func startTracking(_ call: CAPPluginCall) {
+        Airbridge.startTracking()
         call.resolve()
     }
 
@@ -71,23 +109,26 @@ public class AirbridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        // Get semantic attributes
-        let semanticAttributes = call.getObject("semanticAttributes")
+        // Get semantic attributes and merge top-level action/label/value into it
+        var semantic: [String: Any] = call.getObject("semanticAttributes") ?? [:]
+        if let action = call.getString("action") { semantic["action"] = action }
+        if let label = call.getString("label") { semantic["label"] = label }
+        if call.hasOption("value"), let value = call.getNumber("value") { semantic["value"] = value }
 
         // Get custom attributes
         let customAttributes = call.getObject("customAttributes")
 
-        // Call appropriate trackEvent method based on available parameters
+        // Call trackEvent with merged semantic attributes
         if let customAttributes = customAttributes {
             Airbridge.trackEvent(
                 category: category,
-                semanticAttributes: semanticAttributes ?? [:],
+                semanticAttributes: semantic.isEmpty ? nil : semantic,
                 customAttributes: customAttributes
             )
-        } else if let semanticAttributes = semanticAttributes {
+        } else if !semantic.isEmpty {
             Airbridge.trackEvent(
                 category: category,
-                semanticAttributes: semanticAttributes
+                semanticAttributes: semantic
             )
         } else {
             Airbridge.trackEvent(category: category)

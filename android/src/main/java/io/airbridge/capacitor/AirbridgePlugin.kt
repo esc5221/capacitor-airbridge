@@ -5,6 +5,7 @@ import co.ab180.airbridge.AirbridgeOption
 import co.ab180.airbridge.AirbridgeOptionBuilder
 import co.ab180.airbridge.common.AirbridgeCategory
 import co.ab180.airbridge.common.AirbridgeAttribute
+import co.ab180.airbridge.AirbridgeLogLevel
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -31,17 +32,47 @@ class AirbridgePlugin : Plugin() {
 
         // Optional configuration
         val timeout = call.getInt("autoDetermineTrackingAuthorizationTimeoutInSecond")
-        timeout?.let {
-            // Note: This configuration might be iOS specific
-            // Android implementation may differ
-        }
+        // iOS 전용이므로 Android에서는 무시
 
         val handleAirbridgeOnly = call.getBoolean("isHandleAirbridgeDeeplinkOnly", false)
         if (handleAirbridgeOnly == true) {
             option.setTrackAirbridgeDeeplinkOnlyEnabled(true)
         }
 
+        // Android 전용 옵션 반영
+        call.getBoolean("autoStartTrackingEnabled")?.let { option.setAutoStartTrackingEnabled(it) }
+        call.getBoolean("trackInSessionLifecycleEventEnabled")?.let { option.setTrackInSessionLifeCycleEventEnabled(it) }
+        call.getInt("sessionTimeoutSecond")?.let { option.setSessionTimeout(it.toLong()) }
+        call.getInt("eventTransmitIntervalMs")?.let { option.setEventTransmitInterval(it.toLong()) }
+        call.getBoolean("sdkEnabled")?.let { option.setSDKEnabled(it) }
+        call.getArray("trackingLinkCustomDomains")?.let { arr ->
+            val list = mutableListOf<String>()
+            for (i in 0 until arr.length()) {
+                arr.optString(i)?.let { list.add(it) }
+            }
+            if (list.isNotEmpty()) option.setTrackingLinkCustomDomains(list)
+        }
+        call.getString("logLevel")?.let { lvl ->
+            val mapped = when (lvl.uppercase()) {
+                // Map common inputs to AirbridgeLogLevel
+                "DEBUG" -> AirbridgeLogLevel.DEBUG
+                "INFO" -> AirbridgeLogLevel.INFO
+                "WARN", "WARNING" -> AirbridgeLogLevel.WARNING
+                "ERROR" -> AirbridgeLogLevel.ERROR
+                "FAULT", "ASSERT" -> AirbridgeLogLevel.FAULT
+                else -> null
+            }
+            mapped?.let { option.setLogLevel(it) }
+        }
+        // NOTE: setSdkEnabled is not available in current SDK; skip if unresolved in version
+
         Airbridge.initializeSDK(activity.application, option.build())
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun startTracking(call: PluginCall) {
+        Airbridge.startTracking()
         call.resolve()
     }
 
@@ -63,6 +94,14 @@ class AirbridgePlugin : Plugin() {
                 val value = attrs.get(key)
                 semanticAttrsMap[key] = value
             }
+        }
+
+        // Map top-level action/label/value into semantic attributes per iOS/Android v4 guide
+        call.getString("action")?.let { semanticAttrsMap["action"] = it }
+        call.getString("label")?.let { semanticAttrsMap["label"] = it }
+        if (call.hasOption("value")) {
+            val v = call.getDouble("value")
+            if (v != null) semanticAttrsMap["value"] = v
         }
 
         // Get custom attributes

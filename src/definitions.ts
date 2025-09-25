@@ -10,6 +10,8 @@ export interface AirbridgePlugin {
    * @param options Event tracking options
    */
   trackEvent(options: AirbridgeTrackEventOptions): Promise<void>;
+  /** Start tracking after opt-in */
+  startTracking(): Promise<void>;
 
   /**
    * Set a listener for deep link reception
@@ -142,6 +144,34 @@ export interface AirbridgeInitializeOptions {
    * Handle only Airbridge deeplinks (default: false)
    */
   isHandleAirbridgeDeeplinkOnly?: boolean;
+  /**
+   * Android/iOS: Start tracking automatically (default true)
+   */
+  autoStartTrackingEnabled?: boolean;
+  /**
+   * Android: Track lifecycle events during session (default false)
+   */
+  trackInSessionLifecycleEventEnabled?: boolean;
+  /**
+   * Android: Session timeout seconds (default 300)
+   */
+  sessionTimeoutSecond?: number;
+  /**
+   * Android: Event transmit interval in milliseconds (default 0)
+   */
+  eventTransmitIntervalMs?: number;
+  /**
+   * Android/iOS: Custom domains for tracking links
+   */
+  trackingLinkCustomDomains?: string[];
+  /**
+   * Android: SDK log level (DEBUG|INFO|WARN|ERROR|FAULT)
+   */
+  logLevel?: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FAULT';
+  /**
+   * Android: Initialize with SDK disabled (default false)
+   */
+  sdkEnabled?: boolean;
 }
 
 export interface AirbridgeTrackEventOptions {
@@ -149,6 +179,18 @@ export interface AirbridgeTrackEventOptions {
    * Event category (use AirbridgeCategory enum)
    */
   category: string;
+  /**
+   * Report-visible action (maps to semantic attribute 'action')
+   */
+  action?: string;
+  /**
+   * Report-visible label (maps to semantic attribute 'label')
+   */
+  label?: string;
+  /**
+   * Report-visible value (maps to semantic attribute 'value')
+   */
+  value?: number;
   /**
    * Semantic attributes for the event
    */

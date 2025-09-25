@@ -2,6 +2,7 @@
 const mockPlugin = {
   initialize: jest.fn().mockResolvedValue(undefined),
   trackEvent: jest.fn().mockResolvedValue(undefined),
+  startTracking: jest.fn().mockResolvedValue(undefined),
   setOnDeeplinkReceived: jest.fn().mockResolvedValue(undefined),
   clearDeeplinkListener: jest.fn().mockResolvedValue(undefined),
   setUser: jest.fn().mockResolvedValue(undefined),
@@ -125,6 +126,25 @@ describe('Airbridge Plugin', () => {
       await Airbridge.trackEvent(options);
 
       expect(mockPlugin.trackEvent).toHaveBeenCalledWith(options);
+    });
+    it('should track event with action/label/value', async () => {
+      const options = {
+        category: AirbridgeCategory.SIGNIN,
+        action: 'oauth',
+        label: 'apple',
+        value: 1,
+      } as any;
+
+      await Airbridge.trackEvent(options);
+
+      expect(mockPlugin.trackEvent).toHaveBeenCalledWith(options);
+    });
+  });
+
+  describe('startTracking', () => {
+    it('should start tracking on demand', async () => {
+      await Airbridge.startTracking();
+      expect(mockPlugin.startTracking).toHaveBeenCalledTimes(1);
     });
   });
 
