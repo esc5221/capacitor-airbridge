@@ -33,6 +33,11 @@ export class AirbridgeWeb extends WebPlugin implements AirbridgePlugin {
     // Web implementation would track events here
   }
 
+  async startTracking(): Promise<void> {
+    console.log('Airbridge Web: startTracking called');
+    // Web implementation would start tracking here
+  }
+
   async setOnDeeplinkReceived(options: AirbridgeDeeplinkOptions): Promise<void> {
     console.log('Airbridge Web: setOnDeeplinkReceived called with options:', options);
     // Web implementation would handle deeplinks here
